@@ -27,9 +27,6 @@ def lambda_handler(event, context):
     
     # If there is no resource, then create a new disco ID.
     if resource is None:
-        if operation != 'POST':
-            return respond(ValueError('Unsupported method "{}"'.format(operation)))
-            
         # Create a new disco ID.
         id = str(uuid.uuid1())
         i = {
