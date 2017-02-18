@@ -19,36 +19,40 @@ def respondOK(res=None):
         },
     }
     
-def respondBadRequest(res=None):
+def respondBadRequest(msg):
     return {
         'statusCode': '400',
-        'body': json.dumps(res),
+        'body': json.dumps({'error': msg}),
         'headers': {
             'Content-Type': 'application/json',
         },
     }
     
-def respondMethodNotAllowed(res=None):
+def respondMethodNotAllowed(msg):
     return {
         'statusCode': '405',
-        'body': json.dumps(res),
+        'body': json.dumps({'error': msg}),
         'headers': {
             'Content-Type': 'application/json',
         },
     }
     
-def respondConflict(res):
+def respondConflict(msg):
     return {
         'statusCode': '409',
-        'body': json.dumps(res),
+        'body': json.dumps({'error': msg}),
         'headers': {
             'Content-Type': 'application/json',
         },
     }
     
-def respondNotFound(res=None):
+def respondNotFound(msg):
     return {
-        'statusCode': '404'
+        'statusCode': '404',
+        'body': json.dumps({'error': msg}),
+        'headers': {
+            'Content-Type': 'application/json',
+        },
     }
 
 def lambda_handler(event, context):
@@ -78,24 +82,24 @@ def lambda_handler(event, context):
     id = resource['proxy']
     if operation == 'GET':
         i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)
-        return respondNotFound()
+        return respondNotFound('%s does not exist' % id)
     elif operation == 'POST':
         try:
             i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
         except KeyError:
-            return respondNotFound()
+            return respondNotFound('%s does not exist' % id)
             
         # Get the address, and add it to the cluster.
         try:
             b = json.loads(event['body'])
         except:
-            return respondBadRequest(ValueError('bad request body'))
+            return respondBadRequest('bad request body')
             
         # Decode the node details.
         try:
             addr = b['addr']
         except KeyError:
-            return respondBadRequest(ValueError('address not specified'))
+            return respondBadRequest('address not specified')
                 
         # All good, add to the list of nodes.
         key = {TABLE_KEY: i[TABLE_KEY]}
@@ -108,7 +112,7 @@ def lambda_handler(event, context):
             )
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
-                return respondConflict(ValueError('address already exists'))
+                return respondConflict('address already in use')
             raise e
         
         
@@ -116,4 +120,4 @@ def lambda_handler(event, context):
         i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
         return respondOK(i)
 
-    return respondMethodNotAllowed(ValueError('Unsupported method "{}"'.format(operation)))
+    return respondMethodNotAllowed('unsupported method "{}"'.format(operation))
