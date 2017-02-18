@@ -117,26 +117,3 @@ def lambda_handler(event, context):
         return respondOK(i)
 
     return respondMethodNotAllowed(ValueError('Unsupported method "{}"'.format(operation)))
-            return respond(None, {})
-            
-        # Get the address, and add it to the cluster.
-        try:
-            b = json.loads(event['body'])
-        except:
-            return respond(ValueError('bad request body'))
-            
-        # Decode the node details.
-        try:
-            addr = b['addr']
-        except KeyError:
-            return respond(ValueError('address not specified'))
-                
-        # All good, add to the list of nodes.
-        key = {TABLE_KEY: i[TABLE_KEY]}
-        dynamo.update_item(Key=key, UpdateExpression='SET nodes = list_append(nodes, :i)', ExpressionAttributeValues={':i': [b],})
-        
-        # Return the updated object.
-        i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
-        return respond(None, i)
-
-    return respond(ValueError('Unsupported method "{}"'.format(operation)))
