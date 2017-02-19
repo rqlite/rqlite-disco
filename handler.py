@@ -19,15 +19,6 @@ def respondOK(res=None):
         },
     }
     
-def respondBadRequest(msg):
-    return {
-        'statusCode': '400',
-        'body': json.dumps({'error': msg}),
-        'headers': {
-            'Content-Type': 'application/json',
-        },
-    }
-    
 def respondMethodNotAllowed(msg):
     return {
         'statusCode': '405',
