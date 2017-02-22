@@ -102,10 +102,7 @@ def lambda_handler(event, context):
                 ExpressionAttributeValues={':i': [addr], ':ix': addr}
             )
         except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
-                return respondConflict('address already in use')
-            raise e
-        
+            # Make re-registration idempotent.
         
         # Return the updated object.
         i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
