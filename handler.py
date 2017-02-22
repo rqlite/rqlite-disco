@@ -103,6 +103,7 @@ def lambda_handler(event, context):
             )
         except botocore.exceptions.ClientError as e:
             # Make re-registration idempotent.
+            pass
         
         # Return the updated object.
         i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
