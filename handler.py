@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import os
 import boto3
 import botocore
@@ -100,8 +102,12 @@ def lambda_handler(event, context):
                 ExpressionAttributeValues={':i': [addr], ':ix': addr}
             )
         except botocore.exceptions.ClientError as e:
-            # Make re-registration idempotent.
-            pass
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                # Make reregistration of an address idempotent.
+                pass
+            else:
+                raise e
+        
         
         # Return the updated object.
         i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
