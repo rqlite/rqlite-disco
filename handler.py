@@ -55,7 +55,7 @@ def lambda_handler(event, context):
     resource = event['pathParameters'] 
     queryStringParameters = event['queryStringParameters']
     
-    # If there is no resource, then create a new disco ID.
+    # If there is no resource specified in the request, then create a new disco ID.
     if resource is None:
         # Create a new disco ID.
         id = str(uuid.uuid1())
@@ -69,18 +69,21 @@ def lambda_handler(event, context):
         dynamo.put_item(Item=i)
         return respondOK(i)
 
-    # A resource has been supplied -- access it.
+    # A resource has been supplied so attempt to access by disco ID.
     id = resource['proxy']
     if operation == 'GET':
-        i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)
-        return respondNotFound('%s does not exist' % id)
+        try:
+            i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
+        except KeyError:
+            return respondNotFound('%s does not exist' % id)
     elif operation == 'POST':
+        # A node is attempting to register.
         try:
             i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
         except KeyError:
             return respondNotFound('%s does not exist' % id)
             
-        # Get the address, and add it to the cluster.
+        # Get the node's address, and add it to the registered list.
         try:
             b = json.loads(event['body'])
         except:
@@ -109,8 +112,8 @@ def lambda_handler(event, context):
                 raise e
         
         
-        # Return the updated object.
-        i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
-        return respondOK(i)
+    # Return the object.
+    i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
+    return respondOK(i)
 
     return respondMethodNotAllowed('unsupported method "{}"'.format(operation))
