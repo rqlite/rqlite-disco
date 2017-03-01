@@ -56,6 +56,7 @@ def respondNotFound(msg):
     }
     
 def serialize_item(i):
+    # set types are not serializable to JSON, so convert sets to lists.
     try:
         nodes = i['nodes']
     except KeyError:
@@ -113,6 +114,7 @@ def lambda_handler(event, context):
         # All good, modify the list of nodes.
         key = {TABLE_KEY: i[TABLE_KEY]}
         
+        # Depending on method either add or remove node from set.
         if operation == 'POST':
             expr = 'add nodes :n'
         else:
