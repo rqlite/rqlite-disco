@@ -55,7 +55,7 @@ def lambda_handler(event, context):
     resource = event['pathParameters'] 
     queryStringParameters = event['queryStringParameters']
     
-    # If there is no resource specified in the request, then create a new disco ID.
+    # If there is no resource, then create a new disco ID.
     if resource is None:
         # Create a new disco ID.
         id = str(uuid.uuid1())
@@ -69,21 +69,17 @@ def lambda_handler(event, context):
         dynamo.put_item(Item=i)
         return respondOK(i)
 
-    # A resource has been supplied so attempt to access by disco ID.
+    # A resource has been supplied -- access it.
     id = resource['proxy']
+    try:
+        i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
+    except KeyError:
+        return respondNotFound('%s does not xx exist' % id)
+        
     if operation == 'GET':
-        try:
-            i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
-        except KeyError:
-            return respondNotFound('%s does not exist' % id)
+        return respondOK(i)
     elif operation == 'POST':
-        # A node is attempting to register.
-        try:
-            i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
-        except KeyError:
-            return respondNotFound('%s does not exist' % id)
-            
-        # Get the node's address, and add it to the registered list.
+        # Get the address, and add it to the cluster.
         try:
             b = json.loads(event['body'])
         except:
@@ -95,8 +91,9 @@ def lambda_handler(event, context):
         except KeyError:
             return respondBadRequest('address not specified')
                 
-        # All good, add to the list of nodes.
+        # All good, modify the list of nodes.
         key = {TABLE_KEY: i[TABLE_KEY]}
+        
         try:
             dynamo.update_item(
                 Key=key,
@@ -111,9 +108,8 @@ def lambda_handler(event, context):
             else:
                 raise e
         
-        
-    # Return the object.
-    i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
-    return respondOK(i)
+        # Return the updated object.
+        i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
+        return respondOK(i)
 
     return respondMethodNotAllowed('unsupported method "{}"'.format(operation))
