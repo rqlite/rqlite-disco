@@ -56,7 +56,6 @@ def respondNotFound(msg):
     }
     
 def serialize_item(i):
-    # set types are not serializable to JSON, so convert sets to lists.
     try:
         nodes = i['nodes']
     except KeyError:
@@ -94,7 +93,7 @@ def lambda_handler(event, context):
     try:
         i = dynamo.get_item(Key={TABLE_KEY: id}, ConsistentRead=True)['Item']
     except KeyError:
-        return respondNotFound('%s does not xx exist' % id)
+        return respondNotFound('%s does not exist' % id)
         
     if operation == 'GET':
         return respondOK(serialize_item(i))
@@ -114,16 +113,15 @@ def lambda_handler(event, context):
         # All good, modify the list of nodes.
         key = {TABLE_KEY: i[TABLE_KEY]}
         
-        # Depending on method either add or remove node from set.
         if operation == 'POST':
-            expr = 'add nodes :n'
+            expr = 'ADD nodes :n'
         else:
-            expr = 'delete nodes :n'
+            expr = 'DELETE nodes :n'
             
         dynamo.update_item(
             Key=key,
-            UpdateExpression=expr,
-            ExpressionAttributeValues={':n': set([addr])}
+            UpdateExpression=' '.join([expr, 'SET updated_at=:m']),
+            ExpressionAttributeValues={':n': set([addr]), ':m': str(datetime.datetime.utcnow())}
         )
         
         # Return the updated object.
